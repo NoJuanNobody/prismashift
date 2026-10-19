@@ -1,0 +1,18 @@
+services:
+  prismashift:
+    build: .
+    container_name: prismashift
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    volumes:
+      # Map your homelab NAS/local storage paths here
+      - ./data/inbox:/data/inbox
+      - ./data/sorted:/data/sorted
+      - ./data/db:/data/prismashift.db
+    environment:
+      - PRISMASHIFT_INBOX_DIR=/data/inbox
+      - PRISMASHIFT_ORGANIZED_DIR=/data/sorted
+      - PRISMASHIFT_DB_PATH=/data/prismashift.db
+      - PRISMASHIFT_DEBOUNCE_SECONDS=3.0
+      - PRISMASHIFT_ROUTE_MODE=MOVE

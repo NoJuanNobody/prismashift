@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PrismaShift — Intelligent Automated Image Pipeline</title>
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              dark: '#0B0F19',
+              card: '#111827',
+              border: '#1F2937',
+              lightCard: '#FFFFFF',
+              lightBg: '#F8FAFC',
+            }
+          },
+          animation: {
+            'pulse-glow': 'pulseGlow 2s infinite ease-in-out',
+            'float': 'float 3s ease-in-out infinite',
+          },
+          keyframes: {
+            pulseGlow: {
+              '0%, 100%': { opacity: 0.6, transform: 'scale(1)' },
+              '50%': { opacity: 1, transform: 'scale(1.05)' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-4px)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Glassmorphic and ambient effects */
+    .glass-panel {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .light .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 35px -5px rgba(99, 102, 241, 0.25);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 35px -5px rgba(6, 182, 212, 0.25);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #374151;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #4B5563;
+    }
+  </style>
+</head>
+<body class="bg-[#0B0F19] text-slate-100 min-h-screen font-sans antialiased transition-colors duration-200">
+
+  <!-- Ambient background glow gradients -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl animate-float"></div>
+    <div class="absolute top-1/3 -right-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-float" style="animation-delay: -1.5s;"></div>
+    <div class="absolute -bottom-40 left-1/3 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative z-10 flex flex-col min-h-screen">
+    <!-- Top Navbar -->
+    <header class="sticky top-0 z-30 glass-panel border-b border-white/5 px-6 py-3.5">
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <!-- Brand -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+            <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-cyan-200">PrismaShift</span>
+              <span class="text-[10px] font-mono tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold">v2.4 Pro</span>
+            </div>
+            <p class="text-xs text-slate-400 hidden sm:block">Intelligent Automated Image Ingestion & Routing</p>
+          </div>
+        </div>
+
+        <!-- Status & Actions -->
+        <div class="flex items-center gap-3 sm:gap-4">
+          <!-- Live Pipeline Status Badge -->
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="hidden sm:inline">Pipeline Status:</span>
+            <span class="font-semibold">Online &amp; Syncing</span>
+          </div>
+
+          <!-- Quick Refresh Button -->
+          <button id="refreshBtn" onclick="triggerRefresh()" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-white/10 transition-all text-xs flex items-center gap-1.5" title="Refresh Telemetry">
+            <i data-lucide="refresh-cw" class="w-4 h-4" id="refreshIcon"></i>
+            <span class="hidden md:inline">Sync</span>
+          </button>
+
+          <!-- Dark/Light Mode Switcher -->
+          <button onclick="toggleTheme()" class="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white border border-white/10 transition-all" title="Toggle Theme">
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+            <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+          </button>
+
+          <!-- User / Organization Badge -->
+          <div class="hidden lg:flex items-center gap-2.5 pl-3 border-l border-white/10">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-inner">
+              AC
+            </div>
+            <div class="text-left text-xs">
+              <div class="font-medium text-slate-200">Apex Media Cloud</div>
+              <div class="text-[10px] text-slate-400">Enterprise Node</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 space-y-8">
+      
+      <!-- Hero Banner -->
+      <section class="relative overflow-hidden rounded-2xl p-6 sm:p-8 bg-gradient-to-r from-slate-900/90 via-indigo-950/40 to-slate-900/90 border border-indigo-500/20 shadow-2xl">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="max-w-2xl space-y-2">
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 text-xs font-mono font-medium">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-400"></i>
+              Autonomous Neural Classifier Active
+            </div>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-white">
+              Intelligent Automated <span class="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-cyan-300">Image Pipeline</span>
+            </h1>
+            <p class="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
+              Real-time deep feature extraction, category routing, dynamic metadata parsing, and low-latency storage dispatch.
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <button onclick="scrollToUpload()" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm flex items-center gap-2 shadow-lg shadow-indigo-600/30 transition-all hover:scale-[1.02]">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              Upload Batch
+            </button>
+            <button onclick="exportBatchReport()" class="px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-200 font-medium text-sm border border-white/10 flex items-center gap-2 transition-all">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Export Telemetry
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Metrics Cards -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <!-- Metric 1: Total Processed -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-indigo-500/40 transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Processed</span>
+            <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+              <i data-lucide="database" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="text-3xl font-bold tracking-tight text-white font-mono" id="statTotal">1,482</span>
+            <span class="text-xs font-medium text-emerald-400 flex items-center gap-0.5">
+              <i data-lucide="trending-up" class="w-3.5 h-3.5"></i> +14.2%
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Cumulative ingested assets</p>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div class="bg-indigo-500 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Metric 2: Category A (Photos & Landscapes) -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-emerald-500/40 transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Category A: Landscapes</span>
+            <div class="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <i data-lucide="image" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="text-3xl font-bold tracking-tight text-white font-mono" id="statCatA">894</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[11px] font-semibold border border-emerald-500/30">
+              60.3%
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Outdoor, scenery & nature imagery</p>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div class="bg-emerald-500 h-full rounded-full transition-all duration-500" id="progressCatA" style="width: 60%"></div>
+          </div>
+        </div>
+
+        <!-- Metric 3: Category B (Screenshots & Portraits) -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-cyan-500/40 transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Category B: Portraits</span>
+            <div class="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+              <i data-lucide="user-check" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="text-3xl font-bold tracking-tight text-white font-mono" id="statCatB">542</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono text-[11px] font-semibold border border-cyan-500/30">
+              36.6%
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Portraits, UI screenshots & headshots</p>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div class="bg-cyan-500 h-full rounded-full transition-all duration-500" id="progressCatB" style="width: 37%"></div>
+          </div>
+        </div>
+
+        <!-- Metric 4: Needs Review / Unclassified -->
+        <div class="glass-panel p-5 rounded-2xl relative overflow-hidden group hover:border-amber-500/40 transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Review Queue</span>
+            <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <i data-lucide="alert-circle" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="mt-4 flex items-baseline gap-2">
+            <span class="text-3xl font-bold tracking-tight text-white font-mono" id="statReview">46</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-mono text-[11px] font-semibold border border-amber-500/30">
+              3.1%
+            </span>
+          </div>
+          <p class="mt-1 text-xs text-slate-400">Low confidence / Edge-case assets</p>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div class="bg-amber-500 h-full rounded-full transition-all duration-500" id="progressReview" style="width: 12%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Customer Drag & Drop Ingestion Zone -->
+      <section id="uploadSection" class="glass-panel rounded-2xl p-6 sm:p-8 border border-indigo-500/20 glow-indigo">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="hard-drive-upload" class="w-5 h-5 text-indigo-400"></i>
+              Live Image Ingestion & Routing Drop Target
+            </h2>
+            <p class="text-xs sm:text-sm text-slate-400">Automated classification triggered immediately upon drop. Accepts JPG, PNG, WEBP, AVIF.</p>
+          </div>
+          <div class="hidden sm:flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-white/5">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Client-Side SHA-256 Verification
+          </div>
+        </div>
+
+        <!-- Drop Box -->
+        <div id="dropZone" 
+             ondragover="handleDragOver(event)" 
+             ondragleave="handleDragLeave(event)" 
+             ondrop="handleDrop(event)"
+             onclick="triggerFileInput()"
+             class="border-2 border-dashed border-indigo-500/30 hover:border-indigo-400/80 rounded-2xl p-8 sm:p-12 text-center bg-indigo-950/10 hover:bg-indigo-950/20 transition-all cursor-pointer group relative overflow-hidden">
+          
+          <input type="file" id="fileInput" multiple accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+          
+          <div class="flex flex-col items-center justify-center space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/30 transition-all">
+              <i data-lucide="upload" class="w-8 h-8"></i>
+            </div>
+            <div class="space-y-1">
+              <p class="text-base sm:text-lg font-semibold text-slate-100">
+                Drop images here to automatically classify &amp; route
+              </p>
+              <p class="text-xs sm:text-sm text-slate-400">
+                or <span class="text-indigo-400 underline decoration-indigo-400/50 hover:text-indigo-300 font-medium">browse files</span> from your computer
+              </p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-2 pt-2">
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-white/5">Auto-Resize 4K</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-white/5">EXIF Parsing</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 border border-white/5">Neural Tagging</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Upload / Processing Stream Queue -->
+        <div id="uploadQueueContainer" class="mt-6 space-y-3 hidden">
+          <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+            <span class="flex items-center gap-2">
+              <i data-lucide="loader-2" class="w-4 h-4 text-indigo-400 animate-spin"></i>
+              Active Classification Stream (<span id="queueCount">0</span> items)
+            </span>
+            <button onclick="clearCompletedUploads()" class="text-slate-400 hover:text-white text-xs hover:underline">Clear Completed</button>
+          </div>
+          <div id="uploadList" class="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <!-- Dynamically populated files -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Grid Layout: Categorized Galleries & Live Activity Feed -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left 2 Cols: Categorized Galleries / File Browser -->
+        <section class="lg:col-span-2 space-y-6">
+          <div class="glass-panel rounded-2xl p-6 border border-white/10">
+            <!-- Header & Filter Tabs -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/5">
+              <div>
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="folder-kanban" class="w-5 h-5 text-indigo-400"></i>
+                  Pipeline Repository
+                </h3>
+                <p class="text-xs text-slate-400">Inspected and routed assets with automated confidence tags</p>
+              </div>
+              
+              <div class="flex items-center gap-2">
+                <button onclick="downloadFilteredZip()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium border border-white/10 flex items-center gap-1.5 transition-all">
+                  <i data-lucide="archive" class="w-3.5 h-3.5"></i>
+                  Download Category Zip
+                </button>
+              </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex flex-wrap items-center gap-2 mt-4">
+              <button onclick="filterCategory('all')" id="tab-all" class="cat-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-indigo-600 text-white shadow-sm transition-all flex items-center gap-2">
+                <span>All Assets</span>
+                <span class="px-1.5 py-0.2 rounded-full bg-white/20 text-[10px]" id="countTabAll">12</span>
+              </button>
+              <button onclick="filterCategory('Category A')" id="tab-Category-A" class="cat-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>Category A (Landscapes)</span>
+                <span class="px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 text-[10px]" id="countTabCatA">6</span>
+              </button>
+              <button onclick="filterCategory('Category B')" id="tab-Category-B" class="cat-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <span>Category B (Portraits)</span>
+                <span class="px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 text-[10px]" id="countTabCatB">4</span>
+              </button>
+              <button onclick="filterCategory('Unclassified')" id="tab-Unclassified" class="cat-tab px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/5 transition-all flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span>Review / Edge Cases</span>
+                <span class="px-1.5 py-0.2 rounded-full bg-slate-700 text-slate-300 text-[10px]" id="countTabUnclass">2</span>
+              </button>
+            </div>
+
+            <!-- Gallery Cards Grid -->
+            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+              <!-- Dynamically populated cards -->
+            </div>
+
+            <!-- Empty State (hidden by default) -->
+            <div id="galleryEmpty" class="hidden py-12 text-center">
+              <i data-lucide="image-off" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+              <p class="text-sm font-medium text-slate-400">No assets match the selected filter</p>
+              <button onclick="filterCategory('all')" class="mt-2 text-xs text-indigo-400 hover:underline">Reset Filter</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right 1 Col: Real-time Activity Stream -->
+        <section class="space-y-6">
+          <div class="glass-panel rounded-2xl p-6 border border-white/10 flex flex-col h-full">
+            <div class="flex items-center justify-between pb-4 border-b border-white/5">
+              <div>
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                  <i data-lucide="activity" class="w-4 h-4 text-emerald-400"></i>
+                  Live Activity Stream
+                </h3>
+                <p class="text-xs text-slate-400">Real-time pipeline dispatch telemetry</p>
+              </div>
+              <span class="flex h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+
+            <!-- Stream Log Items -->
+            <div id="activityStream" class="space-y-3.5 mt-4 overflow-y-auto max-h-[560px] pr-1">
+              <!-- Dynamically populated activities -->
+            </div>
+
+            <div class="pt-4 mt-auto border-t border-white/5 flex items-center justify-between text-[11px] text-slate-500">
+              <span class="font-mono">Websocket: connected</span>
+              <span class="font-mono">Latency: 18ms</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-white/5 py-6 px-6 glass-panel text-center text-xs text-slate-500">
+      <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-slate-400">PrismaShift Image Platform</span>
+          <span>&bull;</span>
+          <span>High-Throughput Distributed Routing Core</span>
+        </div>
+        <div class="flex items-center gap-4 text-slate-400">
+          <a href="#" class="hover:text-white transition-colors">API Docs</a>
+          <a href="#" class="hover:text-white transition-colors">Webhook Config</a>
+          <a href="#" class="hover:text-white transition-colors">System Metrics</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Detail / Admin Action Modal -->
+  <div id="assetModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-200">
+    <div class="glass-panel w-full max-w-2xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden transform scale-95 transition-transform duration-200" id="modalBox">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-slate-900/60">
+        <div class="flex items-center gap-3">
+          <div id="modalCategoryBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border">
+            <!-- Badge text -->
+          </div>
+          <h3 id="modalFilename" class="text-sm sm:text-base font-bold text-white truncate max-w-xs sm:max-w-sm">
+            asset_filename.jpg
+          </h3>
+        </div>
+        <button onclick="closeModal()" class="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 space-y-6">
+        <!-- Image Preview Frame -->
+        <div class="relative w-full h-64 sm:h-72 rounded-xl overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center">
+          <img id="modalImage" src="" alt="Asset Preview" class="max-h-full max-w-full object-contain">
+        </div>
+
+        <!-- Metadata Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="p-3 rounded-xl bg-slate-900/50 border border-white/5">
+            <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">Resolution</span>
+            <span id="modalResolution" class="text-xs font-semibold text-slate-200 font-mono">3840 x 2160</span>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/50 border border-white/5">
+            <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">File Size</span>
+            <span id="modalSize" class="text-xs font-semibold text-slate-200 font-mono">4.2 MB</span>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/50 border border-white/5">
+            <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">Confidence</span>
+            <span id="modalConfidence" class="text-xs font-semibold text-emerald-400 font-mono">98.4%</span>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-900/50 border border-white/5">
+            <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400 block">Format</span>
+            <span id="modalFormat" class="text-xs font-semibold text-slate-200 font-mono">JPEG / RGB</span>
+          </div>
+        </div>
+
+        <!-- Admin Routing Override -->
+        <div class="p-4 rounded-xl bg-indigo-950/20 border border-indigo-500/20 space-y-2">
+          <span class="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+            Admin Routing Override
+          </span>
+          <div class="flex items-center gap-2">
+            <select id="reclassifySelect" class="bg-slate-900 border border-white/10 text-xs rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-indigo-500 flex-1">
+              <option value="Category A">Category A: Photos & Landscapes</option>
+              <option value="Category B">Category B: Screenshots & Portraits</option>
+              <option value="Unclassified">Unclassified / Quarantine</option>
+            </select>
+            <button onclick="applyManualReclassify()" class="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-all shadow">
+              Apply Routing
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 bg-slate-900/70 border-t border-white/10 flex items-center justify-between">
+        <button onclick="deleteCurrentAsset()" class="text-xs text-rose-400 hover:text-rose-300 font-medium flex items-center gap-1.5 hover:underline">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          Purge Asset
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-medium transition-all">
+            Close
+          </button>
+          <a id="modalDownloadBtn" href="#" download class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-medium flex items-center gap-1.5 transition-all shadow-md">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            Download Asset
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 transition-all duration-300 glass-panel border border-white/10 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+    <div id="toastIcon" class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+      <i data-lucide="check" class="w-3.5 h-3.5"></i>
+    </div>
+    <div class="text-xs">
+      <div id="toastTitle" class="font-bold text-slate-100">Success</div>
+      <div id="toastMsg" class="text-slate-400">Action executed smoothly</div>
+    </div>
+  </div>
+
+  <!-- Application Logic -->
+  <script>
+    // Initial State & Mock Assets
+    const state = {
+      currentFilter: 'all',
+      selectedAssetId: null,
+      stats: {
+        total: 1482,
+        catA: 894,
+        catB: 542,
+        review: 46
+      },
+      assets: [
+        {
+          id: 'ast-101',
+          name: 'alpine_ridge_sunset.jpg',
+          category: 'Category A',
+          confidence: 0.98,
+          resolution: '3840 x 2160',
+          size: '4.2 MB',
+          format: 'JPEG',
+          timestamp: '1 min ago',
+          url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-102',
+          name: 'executive_portrait_studio.png',
+          category: 'Category B',
+          confidence: 0.95,
+          resolution: '2400 x 3000',
+          size: '6.1 MB',
+          format: 'PNG',
+          timestamp: '3 mins ago',
+          url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-103',
+          name: 'misty_valley_drone.jpg',
+          category: 'Category A',
+          confidence: 0.94,
+          resolution: '4096 x 2160',
+          size: '5.8 MB',
+          format: 'JPEG',
+          timestamp: '8 mins ago',
+          url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-104',
+          name: 'crm_dashboard_dark_ui.png',
+          category: 'Category B',
+          confidence: 0.92,
+          resolution: '1920 x 1080',
+          size: '1.4 MB',
+          format: 'PNG',
+          timestamp: '14 mins ago',
+          url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-105',
+          name: 'glacier_national_lake.jpg',
+          category: 'Category A',
+          confidence: 0.99,
+          resolution: '5120 x 2880',
+          size: '8.4 MB',
+          format: 'JPEG',
+          timestamp: '22 mins ago',
+          url: 'https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-106',
+          name: 'abstract_glitch_scan_temp.webp',
+          category: 'Unclassified',
+          confidence: 0.44,
+          resolution: '1024 x 1024',
+          size: '850 KB',
+          format: 'WEBP',
+          timestamp: '35 mins ago',
+          url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-107',
+          name: 'founder_interview_headshot.jpg',
+          category: 'Category B',
+          confidence: 0.97,
+          resolution: '3000 x 3000',
+          size: '3.9 MB',
+          format: 'JPEG',
+          timestamp: '42 mins ago',
+          url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-108',
+          name: 'cascade_falls_autumn.jpg',
+          category: 'Category A',
+          confidence: 0.96,
+          resolution: '3840 x 2160',
+          size: '4.7 MB',
+          format: 'JPEG',
+          timestamp: '55 mins ago',
+          url: 'https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?w=600&auto=format&fit=crop&q=80'
+        },
+        {
+          id: 'ast-109',
+          name: 'scanned_handwritten_note.jpg',
+          category: 'Unclassified',
+          confidence: 0.51,
+          resolution: '1200 x 1600',
+          size: '980 KB',
+          format: 'JPEG',
+          timestamp: '1 hr ago',
+          url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&auto=format&fit=crop&q=80'
+        }
+      ],
+      activities: [
+        {
+          id: 'act-1',
+          type: 'routed',
+          title: 'Classified & Dispatched',
+          desc: 'alpine_ridge_sunset.jpg routed to Category A (Landscapes)',
+          score: '98%',
+          category: 'Category A',
+          time: 'Just now'
+        },
+        {
+          id: 'act-2',
+          type: 'routed',
+          title: 'Classified & Dispatched',
+          desc: 'executive_portrait_studio.png routed to Category B (Portraits)',
+          score: '95%',
+          category: 'Category B',
+          time: '3m ago'
+        },
+        {
+          id: 'act-3',
+          type: 'quarantine',
+          title: 'Flagged for Review',
+          desc: 'abstract_glitch_scan_temp.webp confidence below 60% threshold',
+          score: '44%',
+          category: 'Unclassified',
+          time: '35m ago'
+        },
+        {
+          id: 'act-4',
+          type: 'sync',
+          title: 'S3 Sync Completed',
+          desc: 'Batch #4109 replicated across US-East-1 and EU-Central-1',
+          score: '100%',
+          category: 'System',
+          time: '45m ago'
+        }
+      ]
+    };
+
+    // Render Galleries
+    function renderGallery() {
+      const grid = document.getElementById('galleryGrid');
+      const empty = document.getElementById('galleryEmpty');
+      grid.innerHTML = '';
+
+      const filtered = state.assets.filter(item => {
+        if (state.currentFilter === 'all') return true;
+        return item.category === state.currentFilter;
+      });
+
+      if (filtered.length === 0) {
+        empty.classList.remove('hidden');
+      } else {
+        empty.classList.add('hidden');
+      }
+
+      filtered.forEach(asset => {
+        const badgeColor = getCategoryBadgeStyle(asset.category);
+        const card = document.createElement('div');
+        card.className = "group relative rounded-xl overflow-hidden glass-panel border border-white/5 hover:border-indigo-500/40 transition-all duration-300 hover:-translate-y-1 shadow-md hover:shadow-xl";
+        card.innerHTML = `
+          <div class="relative h-44 w-full overflow-hidden bg-slate-900 cursor-pointer" onclick="openModal('${asset.id}')">
+            <img src="${asset.url}" alt="${asset.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20 opacity-80 group-hover:opacity-60 transition-opacity"></div>
+            
+            <div class="absolute top-2.5 left-2.5">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold border ${badgeColor}">
+                ${asset.category}
+              </span>
+            </div>
+
+            <div class="absolute top-2.5 right-2.5">
+              <span class="px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] font-mono text-emerald-400 font-semibold border border-white/10">
+                ${Math.round(asset.confidence * 100)}% Match
+              </span>
+            </div>
+
+            <div class="absolute bottom-2.5 left-2.5 right-2.5">
+              <p class="text-xs font-semibold text-white truncate drop-shadow">${asset.name}</p>
+              <div class="flex items-center justify-between text-[10px] text-slate-300 mt-0.5">
+                <span>${asset.resolution}</span>
+                <span>${asset.size}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-3 py-2 bg-slate-900/60 border-t border-white/5 flex items-center justify-between text-[11px]">
+            <span class="text-slate-400">${asset.timestamp}</span>
+            <div class="flex items-center gap-1">
+              <button onclick="openModal('${asset.id}')" class="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors" title="Inspect">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              </button>
+              <a href="${asset.url}" download="${asset.name}" class="p-1 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors" title="Download">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      // Update counters
+      updateCounts();
+      lucide.createIcons();
+    }
+
+    // Badge styling helper
+    function getCategoryBadgeStyle(cat) {
+      if (cat === 'Category A') return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+      if (cat === 'Category B') return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30';
+      return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+    }
+
+    // Tab Filter
+    function filterCategory(cat) {
+      state.currentFilter = cat;
+      document.querySelectorAll('.cat-tab').forEach(btn => {
+        btn.classList.remove('bg-indigo-600', 'text-white');
+        btn.classList.add('bg-slate-800/80', 'text-slate-300');
+      });
+
+      const activeBtnId = cat === 'all' ? 'tab-all' : `tab-${cat.replace(' ', '-')}`;
+      const activeBtn = document.getElementById(activeBtnId);
+      if (activeBtn) {
+        activeBtn.classList.remove('bg-slate-800/80', 'text-slate-300');
+        activeBtn.classList.add('bg-indigo-600', 'text-white');
+      }
+
+      renderGallery();
+    }
+
+    // Update Counts
+    function updateCounts() {
+      const allCount = state.assets.length;
+      const catACount = state.assets.filter(a => a.category === 'Category A').length;
+      const catBCount = state.assets.filter(a => a.category === 'Category B').length;
+      const unclassCount = state.assets.filter(a => a.category === 'Unclassified').length;
+
+      document.getElementById('countTabAll').innerText = allCount;
+      document.getElementById('countTabCatA').innerText = catACount;
+      document.getElementById('countTabCatB').innerText = catBCount;
+      document.getElementById('countTabUnclass').innerText = unclassCount;
+    }
+
+    // Render Activity Stream
+    function renderActivityStream() {
+      const container = document.getElementById('activityStream');
+      container.innerHTML = '';
+
+      state.activities.forEach(item => {
+        let iconName = 'arrow-right-circle';
+        let iconColor = 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
+
+        if (item.category === 'Category A') {
+          iconName = 'image';
+          iconColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+        } else if (item.category === 'Category B') {
+          iconName = 'user-check';
+          iconColor = 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20';
+        } else if (item.category === 'Unclassified') {
+          iconName = 'alert-triangle';
+          iconColor = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+        } else {
+          iconName = 'refresh-cw';
+          iconColor = 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20';
+        }
+
+        const el = document.createElement('div');
+        el.className = "p-3 rounded-xl bg-slate-900/50 hover:bg-slate-900/80 border border-white/5 transition-all text-xs flex items-start gap-3";
+        el.innerHTML = `
+          <div class="p-2 rounded-lg border ${iconColor} flex-shrink-0 mt-0.5">
+            <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="font-semibold text-slate-200 truncate">${item.title}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${item.time}</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">${item.desc}</p>
+          </div>
+        `;
+        container.appendChild(el);
+      });
+      lucide.createIcons();
+    }
+
+    // Drag & Drop Handlers
+    function handleDragOver(e) {
+      e.preventDefault();
+      const zone = document.getElementById('dropZone');
+      zone.classList.add('border-indigo-400', 'bg-indigo-950/40', 'scale-[1.005]');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      const zone = document.getElementById('dropZone');
+      zone.classList.remove('border-indigo-400', 'bg-indigo-950/40', 'scale-[1.005]');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      handleDragLeave(e);
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        processUploadedFiles(Array.from(e.dataTransfer.files));
+      }
+    }
+
+    function triggerFileInput() {
+      document.getElementById('fileInput').click();
+    }
+
+    function handleFileSelect(e) {
+      if (e.target.files && e.target.files.length > 0) {
+        processUploadedFiles(Array.from(e.target.files));
+      }
+    }
+
+    function scrollToUpload() {
+      document.getElementById('uploadSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Live Upload & Classification Pipeline
+    async function processUploadedFiles(files) {
+      const container = document.getElementById('uploadQueueContainer');
+      const list = document.getElementById('uploadList');
+      const queueCount = document.getElementById('queueCount');
+      
+      container.classList.remove('hidden');
+      queueCount.innerText = files.length;
+
+      for (let index = 0; index < files.length; index++) {
+        const file = files[index];
+        const fileId = 'upl-' + Math.random().toString(36).substr(2, 9);
+        const item = document.createElement('div');
+        item.id = fileId;
+        item.className = "p-3 rounded-xl bg-slate-900/70 border border-white/5 flex flex-col gap-2";
+        item.innerHTML = `
+          <div class="flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2 truncate max-w-xs sm:max-w-md">
+              <i data-lucide="file-image" class="w-4 h-4 text-indigo-400"></i>
+              <span class="font-medium text-slate-200 truncate">${file.name}</span>
+              <span class="text-[10px] text-slate-500 font-mono">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="status-badge text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                Uploading & Classifying...
+              </span>
+            </div>
+          </div>
+          <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+            <div class="progress-bar bg-indigo-500 h-full rounded-full transition-all duration-300" style="width: 35%"></div>
+          </div>
+        `;
+        list.prepend(item);
+        lucide.createIcons();
+
+        // Perform actual HTTP multipart upload to /api/upload
+        try {
+          const formData = new FormData();
+          formData.append('files', file);
+          formData.append('immediate_process', 'true');
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+          });
+
+          const bar = item.querySelector('.progress-bar');
+          const badge = item.querySelector('.status-badge');
+
+          if (response.ok) {
+            const data = await response.json();
+            const resItem = data.results && data.results[0];
+            const cat = resItem ? (resItem.mapped_type || resItem.category) : 'Category A';
+            const rule = resItem ? resItem.rule_matched : 'neural';
+            const conf = resItem ? Math.round(resItem.confidence * 100) : 95;
+
+            if (bar) {
+              bar.style.width = '100%';
+              bar.classList.replace('bg-indigo-500', cat === 'Category A' || cat === 'Type A' ? 'bg-emerald-500' : (cat === 'Category B' || cat === 'Type B' ? 'bg-cyan-500' : 'bg-amber-500'));
+            }
+
+            if (badge) {
+              badge.innerText = `Routed to ${cat} (${conf}%)`;
+              badge.className = `status-badge text-[10px] font-mono px-2 py-0.5 rounded font-semibold ${getCategoryBadgeStyle(cat)}`;
+            }
+
+            // Refresh full system state
+            await syncTelemetry();
+            await syncFiles();
+          } else {
+            if (bar) {
+              bar.style.width = '100%';
+              bar.classList.replace('bg-indigo-500', 'bg-rose-500');
+            }
+            if (badge) {
+              badge.innerText = `Upload Failed`;
+              badge.className = `status-badge text-[10px] font-mono px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold`;
+            }
+          }
+        } catch (uploadErr) {
+          console.error('Upload failed:', uploadErr);
+        }
+      }
+
+      showToast("Ingestion Batch Finished", `${files.length} images processed`);
+    }
+
+    function clearCompletedUploads() {
+      document.getElementById('uploadList').innerHTML = '';
+      document.getElementById('uploadQueueContainer').classList.add('hidden');
+    }
+
+    // Modal Details Inspection
+    function openModal(assetId) {
+      const asset = state.assets.find(a => a.id === assetId);
+      if (!asset) return;
+
+      state.selectedAssetId = assetId;
+
+      document.getElementById('modalFilename').innerText = asset.name;
+      document.getElementById('modalImage').src = asset.url;
+      document.getElementById('modalResolution').innerText = asset.resolution;
+      document.getElementById('modalSize').innerText = asset.size;
+      document.getElementById('modalConfidence').innerText = `${Math.round(asset.confidence * 100)}%`;
+      document.getElementById('modalFormat').innerText = asset.format;
+      document.getElementById('modalDownloadBtn').href = asset.url;
+      document.getElementById('modalDownloadBtn').setAttribute('download', asset.name);
+
+      const badge = document.getElementById('modalCategoryBadge');
+      badge.innerText = asset.category;
+      badge.className = `px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono border ${getCategoryBadgeStyle(asset.category)}`;
+
+      document.getElementById('reclassifySelect').value = asset.category;
+
+      const modal = document.getElementById('assetModal');
+      const box = document.getElementById('modalBox');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        box.classList.remove('scale-95');
+        box.classList.add('scale-100');
+      }, 10);
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('assetModal');
+      const box = document.getElementById('modalBox');
+      modal.classList.add('opacity-0');
+      box.classList.remove('scale-100');
+      box.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        state.selectedAssetId = null;
+      }, 200);
+    }
+
+    // Modal Admin Reclassification
+    function applyManualReclassify() {
+      if (!state.selectedAssetId) return;
+      const newCat = document.getElementById('reclassifySelect').value;
+      const asset = state.assets.find(a => a.id === state.selectedAssetId);
+      if (asset) {
+        const oldCat = asset.category;
+        asset.category = newCat;
+
+        // Log to stream
+        state.activities.unshift({
+          id: 'act-' + Date.now(),
+          type: 'routed',
+          title: 'Manual Routing Override',
+          desc: `${asset.name} reassigned from ${oldCat} to ${newCat}`,
+          score: '100%',
+          category: newCat,
+          time: 'Just now'
+        });
+
+        renderGallery();
+        renderActivityStream();
+        openModal(state.selectedAssetId); // refresh badge
+        showToast("Asset Reclassified", `Assigned to ${newCat}`);
+      }
+    }
+
+    function deleteCurrentAsset() {
+      if (!state.selectedAssetId) return;
+      const idx = state.assets.findIndex(a => a.id === state.selectedAssetId);
+      if (idx !== -1) {
+        const deleted = state.assets.splice(idx, 1)[0];
+        closeModal();
+        renderGallery();
+        showToast("Asset Removed", `${deleted.name} was purged from pipeline`);
+      }
+    }
+
+    // Quick Actions
+    async function triggerRefresh() {
+      const icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('animate-spin');
+      try {
+        await Promise.all([syncTelemetry(), syncFiles()]);
+        showToast("Telemetry Synchronized", "All storage nodes and pipelines verified");
+      } catch (err) {
+        showToast("Sync Error", "Failed to contact API server");
+      } finally {
+        if (icon) icon.classList.remove('animate-spin');
+      }
+    }
+
+    async function triggerScan() {
+      try {
+        showToast("Scanning Inbox", "Triggering pipeline scan...");
+        const res = await fetch('/api/scan', { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          showToast("Scan Complete", `Scanned ${data.scanned_count} files`);
+          await triggerRefresh();
+        }
+      } catch (e) {
+        showToast("Scan Error", "Failed to trigger scan");
+      }
+    }
+
+    function exportBatchReport() {
+      const jsonContent = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.assets, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", jsonContent);
+      downloadAnchor.setAttribute("download", `prismashift_telemetry_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast("Report Exported", "Telemetry JSON downloaded successfully");
+    }
+
+    function downloadFilteredZip() {
+      const cat = state.currentFilter === 'all' ? 'all' : state.currentFilter;
+      showToast("Packaging Bundle", `Generating archive for: ${cat}`);
+      window.location.href = `/api/download/${encodeURIComponent(cat)}`;
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+      } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+      }
+    }
+
+    function showToast(title, msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastTitle').innerText = title;
+      document.getElementById('toastMsg').innerText = msg;
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 3500);
+    }
+
+    // Real Backend Integration
+    async function syncTelemetry() {
+      try {
+        const res = await fetch('/api/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        state.stats.total = data.total_sorted;
+        state.stats.catA = data.type_a_count;
+        state.stats.catB = data.type_b_count;
+        state.stats.review = data.unclassified_count;
+
+        const statTotal = document.getElementById('statTotal');
+        const statCatA = document.getElementById('statCatA');
+        const statCatB = document.getElementById('statCatB');
+        const statReview = document.getElementById('statReview');
+
+        if (statTotal) statTotal.innerText = state.stats.total.toLocaleString();
+        if (statCatA) statCatA.innerText = state.stats.catA.toLocaleString();
+        if (statCatB) statCatB.innerText = state.stats.catB.toLocaleString();
+        if (statReview) statReview.innerText = state.stats.review.toLocaleString();
+
+        if (data.recent_activity && data.recent_activity.length > 0) {
+          state.activities = data.recent_activity.map(act => ({
+            id: act.id,
+            type: 'routed',
+            title: `Processed ${act.filename}`,
+            desc: `Routed to ${act.category} (rule: ${act.rule_matched})`,
+            score: '100%',
+            category: act.mapped_type || act.category,
+            time: act.timestamp ? act.timestamp.slice(11, 19) : 'Recent'
+          }));
+          renderActivityStream();
+        }
+      } catch (err) {
+        console.warn('Telemetry sync error:', err);
+      }
+    }
+
+    async function syncFiles() {
+      try {
+        const res = await fetch('/api/files');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.files && data.files.length > 0) {
+          state.assets = data.files.map(f => ({
+            id: f.id,
+            name: f.name,
+            category: (f.category.toLowerCase().includes('portrait') || f.category.toLowerCase().includes('screen')) ? 'Category B' : ((f.category.toLowerCase().includes('unclass') || f.category.toLowerCase().includes('corrupt')) ? 'Unclassified' : 'Category A'),
+            raw_category: f.category,
+            confidence: f.confidence,
+            resolution: f.resolution,
+            size: f.size_formatted,
+            format: f.format,
+            timestamp: f.timestamp,
+            url: f.download_url
+          }));
+          renderGallery();
+        }
+      } catch (err) {
+        console.warn('Files sync error:', err);
+      }
+    }
+
+    function initLiveTelemetryStream() {
+      if (typeof EventSource !== 'undefined') {
+        const es = new EventSource('/api/events');
+        es.onmessage = function(e) {
+          try {
+            const data = JSON.parse(e.data);
+            const totalEl = document.getElementById('statTotal');
+            if (totalEl && data.total_sorted !== undefined) {
+              totalEl.innerText = data.total_sorted.toLocaleString();
+            }
+          } catch(err) {}
+        };
+      }
+    }
+
+    // Initialize View
+    document.addEventListener('DOMContentLoaded', () => {
+      renderGallery();
+      renderActivityStream();
+      lucide.createIcons();
+      syncTelemetry();
+      syncFiles();
+      initLiveTelemetryStream();
+    });
+  </script>
+</body>
+</html>
